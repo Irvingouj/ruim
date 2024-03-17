@@ -1,0 +1,28 @@
+[package]
+name = "ruim-server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.80"
+argon2 = "0.5.3"
+async-trait = "0.1.77"
+axum = { version = "0.7.4", features = ["ws", "json"] }
+dashmap = "5.5.3"
+dotenv = "0.15.0"
+flume = "0.11.0"
+jwt-simple = { version = "0.12.9", features = ["pure-rust"], default-features=false }
+num_enum = "0.7.2"
+rand = "0.8.5"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+sqlx = { version = "0.7.3", features = ["runtime-tokio", "sqlite", "postgres", "tls-rustls", "uuid", "time"] }
+thiserror = "1.0.57"
+tokio = { version = "1.36.0", features = ["full"] }
+tower = "0.4.13"
+tower-http = { version = "0.5.2", features = ["trace"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+uuid = { version = "1.7.0", features = ["v4", "serde"] }
