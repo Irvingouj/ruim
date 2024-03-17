@@ -1,9 +1,15 @@
 use axum::{
-    extract::ws::{WebSocket, WebSocketUpgrade, Message},
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     response::IntoResponse,
 };
 
-pub async fn websocket_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
+use crate::service::auth::UserTokenExtractor;
+
+
+pub async fn websocket_handler(
+    UserTokenExtractor { user_id: _ }: UserTokenExtractor, 
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
     ws.on_upgrade(handle_socket)
 }
 

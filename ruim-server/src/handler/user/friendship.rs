@@ -12,8 +12,7 @@ use crate::{handler::GenericResponse, service::auth::UserTokenExtractor};
 
 pub(crate) fn router() -> axum::Router<crate::RuimContext> {
     Router::new()
-        .route("/add", post(add_friend))
-        .route("/remove", axum::routing::post(remove_friend))
+        .route("/application", post(add_friend))
 }
 
 #[derive(Deserialize)]
@@ -51,4 +50,12 @@ pub async fn remove_friend(
     State(db): State<crate::db::Database>,
 ) -> Result<impl IntoResponse, crate::handler::ApiError> {
     Ok(GenericResponse::default().msg("Friend removed successfully"))
+}
+
+pub async fn accept_friend_request(
+    UserTokenExtractor { user_id }: UserTokenExtractor,
+    State(db): State<crate::db::Database>,
+    Json(AddFriendRequest { friend_id }): Json<AddFriendRequest>,
+) -> Result<impl IntoResponse, crate::handler::ApiError> {
+    Ok(GenericResponse::default().msg("Friend request accepted"))
 }
