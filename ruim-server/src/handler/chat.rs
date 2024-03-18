@@ -1,24 +1,24 @@
 use axum::{
-    extract::ws::{Message, WebSocket, WebSocketUpgrade},
+    extract::{
+        ws::{WebSocket, WebSocketUpgrade},
+        State,
+    },
     response::IntoResponse,
 };
+use uuid::Uuid;
 
 use crate::service::auth::UserTokenExtractor;
 
-
 pub async fn websocket_handler(
-    UserTokenExtractor { user_id: _ }: UserTokenExtractor, 
+    UserTokenExtractor { user_id }: UserTokenExtractor,
+    State(_db): State<crate::db::Database>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
-    ws.on_upgrade(handle_socket)
+    ws.on_upgrade(move |ws| async move {
+        handle_socket(ws, user_id).await;
+    })
 }
 
-async fn handle_socket(mut socket: WebSocket) {
-    while let Some(Ok(msg)) = socket.recv().await {
-        if let Message::Text(text) = msg {
-            if socket.send(Message::Text(text)).await.is_err() {
-                break;
-            }
-        }
-    }
+async fn handle_socket(_socket: WebSocket, _sender: Uuid) {
+    todo!()
 }

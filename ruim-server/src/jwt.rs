@@ -4,7 +4,7 @@ use jwt_simple::{
 };
 use uuid::Uuid;
 
-use crate::RuimContext;
+use crate::context::RuimContext;
 
 #[derive(Debug, Clone)]
 pub struct Jwt {
@@ -61,7 +61,7 @@ pub struct UserTokenClaims {
     pub user_id: Uuid,
 }
 
-impl FromRef<crate::RuimContext> for Jwt {
+impl FromRef<RuimContext> for Jwt {
     fn from_ref(input: &RuimContext) -> Self {
         input.jwt.clone()
     }

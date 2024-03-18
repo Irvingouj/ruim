@@ -3,7 +3,7 @@ CREATE TABLE messages (
     sender_id UUID REFERENCES users(user_id),
     receiver_id UUID REFERENCES users(user_id),
     content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE friendships (

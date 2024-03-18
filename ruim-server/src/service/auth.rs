@@ -1,6 +1,6 @@
 use crate::{handler::ApiError, jwt::Jwt};
 use axum::{
-    async_trait, extract::{FromRef, FromRequestParts, Request, State}, http::{self, request::Parts}, middleware::Next, response::{IntoResponse, Response}
+    async_trait, extract::{FromRef, FromRequestParts, Request, State}, http::{self, request::Parts}, middleware::Next, response::{IntoResponse}
 };
 use uuid::Uuid;
 
@@ -19,7 +19,7 @@ pub async fn guard(State(jwt): State<Jwt>, request: Request, next: Next) -> impl
         return err_res;
     };
 
-    if let Ok(_) = jwt.verify_token(token) {
+    if jwt.verify_token(token).is_ok() {
         return next.run(request).await;
     }
 

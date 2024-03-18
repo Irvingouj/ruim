@@ -57,4 +57,30 @@ impl super::Database {
 
         Ok(user)
     }
+
+    pub async fn get_public_users(
+        &self,
+        page: i64,
+        limit: i64,
+    ) -> Result<Vec<User>, super::DBError> {
+        let offset = (page - 1) * limit;
+
+        let users = sqlx::query_as!(
+            User,
+            r#"
+            SELECT * FROM users
+            WHERE accept_public_chat = true
+            ORDER BY created_at
+            LIMIT $1
+            OFFSET $2
+            "#,
+            limit,
+            offset
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(super::DBError::Sqlx)?; // (1)
+
+        Ok(users)
+    }
 }

@@ -1,3 +1,4 @@
+use api_models::user::{ApiUser, LoginBody, RegisterBody};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
@@ -6,18 +7,14 @@ use axum::{
     extract::State,
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, put},
     Json, Router,
 };
 use serde_json::json;
 
 use crate::{
-    db::Database,
-    handler::ApiError,
-    jwt::UserTokenClaims,
-    model::user::ApiUser,
+    context::RuimContext, db::Database, handler::ApiError, jwt::UserTokenClaims,
     service::auth::UserTokenExtractor,
-    RuimContext,
 };
 
 use super::GenericResponse;
@@ -26,17 +23,10 @@ pub mod friendship;
 
 pub fn router(_state: RuimContext) -> Router<RuimContext> {
     Router::new()
-        .route("/signup", post(register))
+        .route("/signup", put(register))
         .route("/login", get(login))
         .route("/detail", get(get_user))
         .nest("/friend", friendship::router())
-}
-
-#[derive(serde::Deserialize)]
-pub struct RegisterBody {
-    username: String,
-    email: String,
-    password: String,
 }
 
 async fn register(
@@ -57,14 +47,8 @@ async fn register(
     Ok(GenericResponse::default().msg("User created successfully"))
 }
 
-#[derive(serde::Deserialize)]
-pub struct LoginBody {
-    username: String,
-    password: String,
-}
-
 async fn login(
-    State(RuimContext { db, jwt }): State<RuimContext>,
+    State(RuimContext { db, jwt, .. }): State<RuimContext>,
     Json(LoginBody { username, password }): Json<LoginBody>,
 ) -> Result<impl IntoResponse, ApiError> {
     let user = db
@@ -122,8 +106,22 @@ pub async fn get_user(
         .map_err(|_| ApiError::msg("Failed to get user"))?;
 
     let user = user.ok_or_else(|| ApiError::msg("User not found").code(StatusCode::NOT_FOUND))?;
+    let api_user: ApiUser = user.into();
+    Ok(Json(api_user))
+}
 
-    Ok(Json(ApiUser::from(user)))
+pub async fn get_public_users(
+    State(db): State<Database>,
+    page: i64,
+    limit: i64,
+) -> Result<impl IntoResponse, ApiError> {
+    let users = db
+        .get_public_users(page, limit)
+        .await
+        .map_err(|_| ApiError::msg("Failed to get users"))?;
+
+    let api_users: Vec<ApiUser> = users.into_iter().map(|u| u.into()).collect();
+    Ok(Json(api_users))
 }
 
 #[cfg(test)]

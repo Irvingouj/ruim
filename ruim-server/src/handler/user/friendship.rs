@@ -1,38 +1,25 @@
-use super::{ApiError, RegisterBody};
+use super::{ApiError};
+use api_models::user::{AddFriendRequest, AddFriendResponse};
 use axum::{
     extract::State,
-    response::{IntoResponse, Response},
+    response::{IntoResponse},
     routing::post,
     Json, Router,
 };
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::{handler::GenericResponse, service::auth::UserTokenExtractor};
+use crate::{context::RuimContext, handler::GenericResponse, service::auth::UserTokenExtractor};
 
-pub(crate) fn router() -> axum::Router<crate::RuimContext> {
+pub(crate) fn router() -> axum::Router<RuimContext> {
     Router::new()
         .route("/application", post(add_friend))
 }
-
-#[derive(Deserialize)]
-pub struct AddFriendRequest {
-    pub friend_id: Uuid,
-}
-
-#[derive(Serialize)]
-pub struct AddFriendResponse {
-    pub application_id: i32,
-    pub friend_id: Uuid,
-}
-
 
 pub async fn add_friend(
     UserTokenExtractor { user_id }: UserTokenExtractor,
     State(db): State<crate::db::Database>,
     // Wow: the Json Extractor must be the last extractor as parameter
     Json(AddFriendRequest { friend_id }): Json<AddFriendRequest>,
-) -> Result<impl IntoResponse, ApiError> {
+) -> Result< Json<AddFriendResponse>, ApiError> {
     let application_id = db
         .create_friend_application(user_id, friend_id)
         .await
@@ -46,16 +33,16 @@ pub async fn add_friend(
 }
 
 pub async fn remove_friend(
-    UserTokenExtractor { user_id }: UserTokenExtractor,
-    State(db): State<crate::db::Database>,
+    UserTokenExtractor { user_id: _ }: UserTokenExtractor,
+    State(_db): State<crate::db::Database>,
 ) -> Result<impl IntoResponse, crate::handler::ApiError> {
     Ok(GenericResponse::default().msg("Friend removed successfully"))
 }
 
 pub async fn accept_friend_request(
-    UserTokenExtractor { user_id }: UserTokenExtractor,
-    State(db): State<crate::db::Database>,
-    Json(AddFriendRequest { friend_id }): Json<AddFriendRequest>,
+    UserTokenExtractor { user_id: _ }: UserTokenExtractor,
+    State(_db): State<crate::db::Database>,
+    Json(AddFriendRequest { friend_id: _ }): Json<AddFriendRequest>,
 ) -> Result<impl IntoResponse, crate::handler::ApiError> {
     Ok(GenericResponse::default().msg("Friend request accepted"))
 }

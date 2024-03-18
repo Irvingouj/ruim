@@ -7,7 +7,7 @@ use sqlx::{Postgres};
 use sqlx::{Connection, Pool};
 
 
-use crate::RuimContext;
+use crate::context::RuimContext;
 
 #[derive(Clone)]
 pub struct Database {
@@ -26,7 +26,7 @@ impl Database {
     }
 }
 
-impl FromRef<crate::RuimContext> for Database{
+impl FromRef<RuimContext> for Database{
     fn from_ref(input: &RuimContext) -> Self {
         input.db.clone()
     }

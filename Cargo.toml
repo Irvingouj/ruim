@@ -3,7 +3,9 @@ resolver = "2"
 members = [
     "ruim-server",
     "ruim-client",
-    "crate/message_broker",
+    "crate/message-broker", 
+    "api-models",
+    "server-dev-util",
 ]
 
 [profile.release]
