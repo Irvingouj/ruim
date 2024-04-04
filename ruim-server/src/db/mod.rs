@@ -1,6 +1,6 @@
 
 mod user;
-
+pub mod chat;
 use axum::extract::FromRef;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Postgres};

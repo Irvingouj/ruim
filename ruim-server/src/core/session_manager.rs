@@ -1,41 +1,26 @@
+use anyhow::Context;
 use axum::extract::{ws::WebSocket, FromRef};
 
 use dashmap::DashMap;
-use serde::Serialize;
 use std::sync::Arc;
 
 use uuid::Uuid;
 
-use crate::{context::RuimContext, db};
+use crate::context::RuimContext;
 
 /// To safely close the websocket, websocket need to take ownership.
 /// This means that it is impossible to have websocket in multiple places.
 /// hence we spwan a task to handle the websocket and communicate with it using channels.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SafeWebsocket {
-    handle: tokio::task::JoinHandle<()>,
     command_sender: tokio::sync::mpsc::Sender<WebsocketControlMessage>,
-    client_receiver: tokio::sync::mpsc::Receiver<WebsocketClientMessage>,
 }
 
 impl SafeWebsocket {
-    pub async fn send_msg<T: Serialize>(&self, msg: T) -> anyhow::Result<()> {
-        let msg = serde_json::to_string(&msg)?;
-        self.command_sender
-            .send(WebsocketControlMessage::SendMsg(msg))
-            .await?;
+    pub async fn send_command(&self, msg: WebsocketControlMessage) -> anyhow::Result<()> {
+        self.command_sender.send(msg).await?;
 
         Ok(())
-    }
-
-    pub async fn recv_msg(&mut self) -> Option<WebsocketClientMessage> {
-        self.client_receiver.recv().await
-    }
-}
-
-impl Drop for SafeWebsocket {
-    fn drop(&mut self) {
-        self.handle.abort();
     }
 }
 
@@ -54,25 +39,45 @@ impl SessionManager {
 }
 
 impl SessionManager {
-    pub fn add_websocket(&self, user_id: Uuid, mut websocket: WebSocket) {
+    pub fn add_websocket(
+        &self,
+        user_id: Uuid,
+        mut websocket: WebSocket,
+    ) -> (tokio::task::JoinHandle<()>, tokio::sync::mpsc::Receiver<WebsocketClientMessage>){
         let (command_sender, mut command_receiver) =
             tokio::sync::mpsc::channel::<WebsocketControlMessage>(1);
         let (client_sender, client_receiver) =
             tokio::sync::mpsc::channel::<WebsocketClientMessage>(10);
+
         let handle = tokio::spawn(async move {
             loop {
                 tokio::select! {
-                    msg = command_receiver.recv() => {
-                        let Some(msg) = msg else{
-                            let _ = websocket.close().await.inspect_err(|err| {
-                                tracing::error!("Error closing websocket: {:?}", err);
+                    msg = websocket.recv() => {
+                        let Some(msg) = msg else {
+                            let _ = client_sender.send(WebsocketClientMessage::Error).await.inspect_err(|err| {
+                                tracing::trace!("Error sending message to session manager: {:?}", err);
                             });
-                            return;
+                            break;
                         };
 
-                        match msg {
-                            WebsocketControlMessage::SendMsg(msg) => {
-                                let _ = websocket.send(axum::extract::ws::Message::Text(serde_json::to_string(&msg).unwrap())).await.inspect_err(|err| {
+                        let Ok(msg) = msg.inspect_err(|err| {
+                            tracing::error!("Error receiving message from websocket: {:?}", err);
+                        }) else {
+                            break;
+                        };
+
+                        let _ = client_sender.send(WebsocketClientMessage::Message(msg)).await.inspect_err(|err| {
+                            tracing::error!("Error sending message to session manager: {:?}", err);
+                        });
+                    }
+                    command = command_receiver.recv() => {
+                        let Some(command) = command else{
+                            tracing::trace!("Command channel closed");
+                            return;
+                        };
+                        match command {
+                            WebsocketControlMessage::SendMessage(msg) => {
+                                let _ = websocket.send(msg).await.inspect_err(|err| {
                                     tracing::error!("Error sending message to websocket: {:?}", err);
                                 });
                             },
@@ -84,69 +89,48 @@ impl SessionManager {
                             }
                         }
                     }
-                    msg = websocket.recv() => {
-                        let Some(msg) = msg else {
-                            let _ = client_sender.send(WebsocketClientMessage::Closed(None)).await.inspect_err(|err| {
-                                tracing::trace!("Error sending message to session manager: {:?}", err);
-                            });
-                            return;
-                        };
-
-                        let Ok(msg) = msg.inspect_err(|err| {
-                            tracing::error!("Error receiving message from websocket: {:?}", err);
-                        }) else {
-                            return;
-                        };
-
-                        match msg {
-                            axum::extract::ws::Message::Text(text) => {
-                                let _ = client_sender.send(WebsocketClientMessage::Msg(text)).await.inspect_err(|err| {
-                                    tracing::error!("Error sending message to session manager: {:?}", err);
-                                });
-                            },
-                            axum::extract::ws::Message::Close(reason) => {
-                                let _ = client_sender.send(WebsocketClientMessage::Closed(reason.map(|msg|CloseMessage{
-                                    code: msg.code,
-                                    reason: msg.reason.to_string(),
-                                }))).await.inspect_err(|err| {
-                                    tracing::error!("Error sending message to session manager: {:?}", err);
-                                });
-                                return;
-                            },
-                            _ => {
-                                tracing::error!("Unsupported message type");
-                            }
-                        }
-
-
-                    }
                 }
             }
+
         });
+
         self.websockets.insert(
             user_id,
             SafeWebsocket {
-                handle,
-                command_sender,
-                client_receiver,
+                command_sender
             },
         );
+
+        (handle,client_receiver)
     }
 
     pub fn remove_websocket(&self, user_id: Uuid) {
         self.websockets.remove(&user_id);
     }
+
+    pub async fn send_control_command(
+        &self,
+        user_id: Uuid,
+        command: WebsocketControlMessage,
+    ) -> anyhow::Result<()> {
+        self.websockets
+            .get(&user_id)
+            .context("missing websocket")?
+            .send_command(command)
+            .await?;
+
+        Ok(())
+    }
 }
 
 pub enum WebsocketControlMessage {
-    SendMsg(String),
+    SendMessage(axum::extract::ws::Message),
     Close,
 }
 
 pub enum WebsocketClientMessage {
-    Msg(String),
-    Closed(Option<CloseMessage>),
-    Err(anyhow::Error),
+    Message(axum::extract::ws::Message),
+    Error
 }
 
 pub struct CloseMessage {

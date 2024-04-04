@@ -11,6 +11,7 @@ impl RuimContext {
     pub async fn new() -> anyhow::Result<Self> {
         let db = db::Database::new().await?;
         let jwt = jwt::Jwt::new_from_env()?;
+
         Ok(Self {
             db,
             jwt,
