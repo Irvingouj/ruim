@@ -1,6 +1,8 @@
 use axum::extract::FromRef;
 use jwt_simple::{
-    algorithms::{RS384KeyPair, RSAKeyPairLike, RSAPublicKeyLike}, common::VerificationOptions, reexports::coarsetime::Duration
+    algorithms::{RS384KeyPair, RSAKeyPairLike, RSAPublicKeyLike},
+    common::VerificationOptions,
+    reexports::coarsetime::Duration,
 };
 use uuid::Uuid;
 
@@ -37,10 +39,12 @@ impl Jwt {
     pub fn verify_token(&self, token: &str) -> anyhow::Result<UserTokenClaims> {
         let public_key = self.key_pair.public_key();
         let option = {
-            #[cfg(debug_assertions)]// development mode, ignore time tolerance
+            #[cfg(debug_assertions)] // development mode, ignore time tolerance
             {
-                let mut verification_options = VerificationOptions::default();
-                verification_options.time_tolerance = Some(Duration::from_days(365));
+                let verification_options = VerificationOptions {
+                    time_tolerance: Some(Duration::from_days(165)),
+                    ..Default::default()
+                };
                 Some(verification_options)
             }
 
@@ -49,7 +53,7 @@ impl Jwt {
                 None
             }
         };
-        
+
         let claim = public_key.verify_token::<UserTokenClaims>(token, option)?;
 
         Ok(claim.custom)

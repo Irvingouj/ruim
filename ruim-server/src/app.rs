@@ -4,8 +4,7 @@ use axum::{middleware, Router};
 
 use crate::{context::RuimContext, handler, service};
 
-
-pub fn create_app(state:RuimContext) -> Router {
+pub fn create_app(state: RuimContext) -> Router {
     Router::new()
         .route(
             "/api/chat",

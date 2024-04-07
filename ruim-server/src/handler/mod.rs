@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
-use axum::{body::Body, http::{HeaderName, Response}, response::IntoResponse};
+use axum::{
+    body::Body,
+    http::{HeaderName, Response},
+    response::IntoResponse,
+};
 use serde_json::json;
-
-
 
 pub mod chat;
 pub mod user;
 
-
 #[derive(Debug)]
 pub struct ApiError {
     msg: String,
-    code : axum::http::StatusCode,
+    code: axum::http::StatusCode,
 }
 
 impl ApiError {
@@ -29,7 +30,7 @@ impl ApiError {
     }
 }
 
-impl From<anyhow::Error> for ApiError{
+impl From<anyhow::Error> for ApiError {
     fn from(value: anyhow::Error) -> Self {
         Self {
             msg: value.to_string(),
@@ -38,7 +39,7 @@ impl From<anyhow::Error> for ApiError{
     }
 }
 
-impl IntoResponse for ApiError{
+impl IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
         let body = axum::Json(json!({
             "error": self.msg,
@@ -76,12 +77,12 @@ impl Default for GenericResponse {
 }
 
 impl GenericResponse {
-    pub fn code (mut self, code: axum::http::StatusCode) -> Self {
+    pub fn code(mut self, code: axum::http::StatusCode) -> Self {
         self.status = code;
         self
     }
 
-    pub fn body (mut self, body: Body) -> Self {
+    pub fn body(mut self, body: Body) -> Self {
         self.body = body;
         self
     }
@@ -93,11 +94,17 @@ impl GenericResponse {
 
     pub fn json<T: serde::Serialize>(self, data: T) -> Self {
         let body = serde_json::to_vec(&data).unwrap();
-        self.body(Body::from(body)).header(HeaderName::from_static("content-type"), "application/json".to_string())
+        self.body(Body::from(body)).header(
+            HeaderName::from_static("content-type"),
+            "application/json".to_string(),
+        )
     }
 
     pub fn text(self, text: String) -> Self {
-        self.body(Body::from(text)).header(HeaderName::from_static("content-type"), "text/plain".to_string())
+        self.body(Body::from(text)).header(
+            HeaderName::from_static("content-type"),
+            "text/plain".to_string(),
+        )
     }
 
     pub fn msg(self, msg: &str) -> Self {

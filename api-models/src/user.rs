@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-
-
 #[derive(Debug, Serialize)]
 pub struct ApiUser {
     pub user_id: Uuid,
@@ -29,7 +27,7 @@ pub struct AddFriendResponse {
     pub friend_id: Uuid,
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RegisterBody {
     pub username: String,
     pub email: String,

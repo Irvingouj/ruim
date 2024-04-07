@@ -1,6 +1,10 @@
 use crate::{handler::ApiError, jwt::Jwt};
 use axum::{
-    async_trait, extract::{FromRef, FromRequestParts, Request, State}, http::{self, request::Parts}, middleware::Next, response::{IntoResponse}
+    async_trait,
+    extract::{FromRef, FromRequestParts, Request, State},
+    http::{self, request::Parts},
+    middleware::Next,
+    response::IntoResponse,
 };
 use uuid::Uuid;
 
@@ -65,7 +69,5 @@ where
         Ok(UserTokenExtractor {
             user_id: claim.user_id,
         })
-
     }
 }
-

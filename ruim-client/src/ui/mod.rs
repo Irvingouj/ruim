@@ -1,5 +1,5 @@
 use self::components::input::{TextInput, LOGIN_INPUT_ID, PASSWORD_INPUT_ID};
-use crate::control::Page;
+use crate::control::RuningMode;
 use ratatui::layout::{Layout, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
@@ -58,6 +58,7 @@ impl Ui {
         &'a self,
         area: Rect,
         buf: &'a mut ratatui::prelude::Buffer,
+        mode: &RuningMode,
     ) -> (Rect, &mut ratatui::prelude::Buffer) {
         let layout = Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
@@ -72,15 +73,11 @@ impl Ui {
 
         let inner = layout[0];
 
-        Paragraph::new("Ruim")
+        let help_text = format!("{}, press Ctrl+C to quit", mode);
+        Paragraph::new(help_text)
             .style(Style::default().fg(Color::White))
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::White))
-            )
-            .render(inner, buf);
+            .render(layout[1], buf);
 
-        return (inner, buf);
+        (inner, buf)
     }
 }

@@ -3,10 +3,10 @@ use dotenv::dotenv;
 use logging::initialize_logging;
 
 pub mod app;
-pub mod term;
-pub mod ui;
 pub mod control;
 pub mod logging;
+pub mod term;
+pub mod ui;
 
 fn main() -> anyhow::Result<()> {
     dotenv().ok();

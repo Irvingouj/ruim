@@ -14,10 +14,7 @@ pub async fn main() -> anyhow::Result<()> {
     let users = create_users();
 
     for user in users {
-        let response = server
-            .put("/api/user/signup")
-            .json(&user)
-            .await;
+        let response = server.put("/api/user/signup").json(&user).await;
 
         tracing::info!(?response);
     }

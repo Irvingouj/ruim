@@ -13,9 +13,8 @@ pub struct User {
     pub updated_at: Option<sqlx::types::time::OffsetDateTime>,
     pub accept_public_chat: bool,
     pub show_in_public_chat: bool,
-    pub last_seen: Option<sqlx::types::time::OffsetDateTime>
+    pub last_seen: Option<sqlx::types::time::OffsetDateTime>,
 }
-
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct FriendApplication {

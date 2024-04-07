@@ -1,17 +1,15 @@
-
-mod user;
 pub mod chat;
+mod user;
 use axum::extract::FromRef;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{Postgres};
-use sqlx::{Connection, Pool};
-
+use sqlx::Postgres;
+use sqlx::Pool;
 
 use crate::context::RuimContext;
 
 #[derive(Clone)]
 pub struct Database {
-    pool: Pool<Postgres>
+    pool: Pool<Postgres>,
 }
 
 impl Database {
@@ -26,12 +24,11 @@ impl Database {
     }
 }
 
-impl FromRef<RuimContext> for Database{
+impl FromRef<RuimContext> for Database {
     fn from_ref(input: &RuimContext) -> Self {
         input.db.clone()
     }
 }
-
 
 #[derive(Debug, thiserror::Error)]
 pub enum DBError {
@@ -55,5 +52,4 @@ impl DBError {
         }
         false
     }
-
 }

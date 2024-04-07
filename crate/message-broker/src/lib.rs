@@ -72,6 +72,17 @@ where
     _phantom2: std::marker::PhantomData<Msg>,
 }
 
+impl<T, S, M> Default for InMemoryBroker<T, S, M>
+where
+    T: Send + Sync + Clone,
+    S: Subscriber<T, M> + Hash + Eq,
+    M: Message<T>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T, S, M> InMemoryBroker<T, S, M>
 where
     T: Send + Sync + Clone,

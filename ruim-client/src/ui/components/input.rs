@@ -1,4 +1,8 @@
-use ratatui::{layout::Layout, style, widgets::{Block, Borders, Paragraph, StatefulWidget, Widget}};
+use ratatui::{
+    layout::Layout,
+    style,
+    widgets::{Block, Borders, Paragraph, StatefulWidget, Widget},
+};
 
 use crate::ui::{FocusableStatefulWidget, IdentifiableStatefulWidget};
 
@@ -16,7 +20,6 @@ impl TextInput {
         self.title = Some(title.to_string());
         self
     }
-
 }
 
 impl StatefulWidget for TextInput {
@@ -33,7 +36,7 @@ impl StatefulWidget for TextInput {
         let mut block = Block::default().borders(Borders::ALL);
 
         if let Some(title) = &self.title {
-             block = block.title(title.as_str());
+            block = block.title(title.as_str());
         }
 
         if self.focused {
@@ -42,16 +45,18 @@ impl StatefulWidget for TextInput {
 
         let paragraph = paragraph.block(block);
         let input_area = Layout::default()
-            .constraints(vec![ratatui::prelude::Constraint::Length(3),ratatui::prelude::Constraint::Fill(1)])
+            .constraints(vec![
+                ratatui::prelude::Constraint::Length(3),
+                ratatui::prelude::Constraint::Fill(1),
+            ])
             .split(area)[0];
 
         paragraph.render(input_area, buf);
     }
 }
 
-
 impl FocusableStatefulWidget for TextInput {
-    fn focus(mut self, value:bool) -> Self {
+    fn focus(mut self, value: bool) -> Self {
         self.focused = value;
         self
     }

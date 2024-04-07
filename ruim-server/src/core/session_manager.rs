@@ -30,6 +30,12 @@ pub struct SessionManager {
     pub websockets: Arc<DashMap<Uuid, SafeWebsocket>>,
 }
 
+impl Default for SessionManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SessionManager {
     pub fn new() -> Self {
         Self {
@@ -43,7 +49,10 @@ impl SessionManager {
         &self,
         user_id: Uuid,
         mut websocket: WebSocket,
-    ) -> (tokio::task::JoinHandle<()>, tokio::sync::mpsc::Receiver<WebsocketClientMessage>){
+    ) -> (
+        tokio::task::JoinHandle<()>,
+        tokio::sync::mpsc::Receiver<WebsocketClientMessage>,
+    ) {
         let (command_sender, mut command_receiver) =
             tokio::sync::mpsc::channel::<WebsocketControlMessage>(1);
         let (client_sender, client_receiver) =
@@ -91,17 +100,12 @@ impl SessionManager {
                     }
                 }
             }
-
         });
 
-        self.websockets.insert(
-            user_id,
-            SafeWebsocket {
-                command_sender
-            },
-        );
+        self.websockets
+            .insert(user_id, SafeWebsocket { command_sender });
 
-        (handle,client_receiver)
+        (handle, client_receiver)
     }
 
     pub fn remove_websocket(&self, user_id: Uuid) {
@@ -130,7 +134,7 @@ pub enum WebsocketControlMessage {
 
 pub enum WebsocketClientMessage {
     Message(axum::extract::ws::Message),
-    Error
+    Error,
 }
 
 pub struct CloseMessage {

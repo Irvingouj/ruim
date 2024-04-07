@@ -1,8 +1,13 @@
-use std::{io::{self, stdout}, time::Duration};
+use std::{
+    io::{self, stdout},
+    time::Duration,
+};
 
 use anyhow::Context;
 use crossterm::{
-    event::{self, Event}, terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen}, ExecutableCommand
+    event::{self, Event},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -25,7 +30,6 @@ pub fn restore() -> anyhow::Result<()> {
         .context("leave alternate screen")?;
     Ok(())
 }
-
 
 pub fn next_event(timeout: Duration) -> anyhow::Result<Option<Event>> {
     if !event::poll(timeout)? {

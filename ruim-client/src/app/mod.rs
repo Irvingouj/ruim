@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use crossterm::event::{Event, KeyEventKind};
+use crossterm::event::Event;
 use ratatui::{backend::Backend, widgets::Widget, Frame, Terminal};
 
 use crate::{
-    control::{self, State},
-    term::{self, next_event},
+    control::{self, AppMode, State},
+    term::next_event,
     ui::Ui,
 };
 
@@ -40,15 +40,13 @@ impl App {
             sender_clone.send(RuimEvent::CtrlC).unwrap();
         })?;
 
-        std::thread::spawn(move || {
-            loop {
-                if let Ok(Some(event)) = next_event(Duration::from_millis(50)) {
-                    match event {
-                        Event::Key(key) => {
-                            sender.send(RuimEvent::Key(key)).unwrap();
-                        }
-                        _ => todo!()
+        std::thread::spawn(move || loop {
+            if let Ok(Some(event)) = next_event(Duration::from_millis(50)) {
+                match event {
+                    Event::Key(key) => {
+                        sender.send(RuimEvent::Key(key)).unwrap();
                     }
+                    _ => todo!(),
                 }
             }
         });
@@ -68,9 +66,7 @@ impl App {
         if let Ok(event) = receiver.recv() {
             tracing::info!(?event, "event received");
             match event {
-                RuimEvent::CtrlC => {
-                    self.state.quit()
-                }
+                RuimEvent::CtrlC => self.state.quit(),
                 RuimEvent::Key(key) => self.handle_key_press(key),
             }
         }
@@ -80,7 +76,11 @@ impl App {
 
 impl Widget for &mut App {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        let (area, buf) = self.ui.render_outer_frame(area, buf);
+        let AppMode::Running(running_mode) = self.state.mode() else {
+            tracing::error!("App mode is not running");
+            return;
+        };
+        let (area, buf) = self.ui.render_outer_frame(area, buf, running_mode);
 
         match &self.state.page {
             control::Page::Login => {

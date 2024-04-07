@@ -1,17 +1,11 @@
-use super::{ApiError};
+use super::ApiError;
 use api_models::user::{AddFriendRequest, AddFriendResponse};
-use axum::{
-    extract::State,
-    response::{IntoResponse},
-    routing::post,
-    Json, Router,
-};
+use axum::{extract::State, response::IntoResponse, routing::post, Json, Router};
 
 use crate::{context::RuimContext, handler::GenericResponse, service::auth::UserTokenExtractor};
 
 pub(crate) fn router() -> axum::Router<RuimContext> {
-    Router::new()
-        .route("/application", post(add_friend))
+    Router::new().route("/application", post(add_friend))
 }
 
 pub async fn add_friend(
@@ -19,7 +13,7 @@ pub async fn add_friend(
     State(db): State<crate::db::Database>,
     // Wow: the Json Extractor must be the last extractor as parameter
     Json(AddFriendRequest { friend_id }): Json<AddFriendRequest>,
-) -> Result< Json<AddFriendResponse>, ApiError> {
+) -> Result<Json<AddFriendResponse>, ApiError> {
     let application_id = db
         .create_friend_application(user_id, friend_id)
         .await

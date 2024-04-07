@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hash::Hash};
 
-use ratatui::widgets::{StatefulWidget, Widget};
+use ratatui::widgets::StatefulWidget;
 
 use crate::ui::{FocusableStatefulWidget, IdentifiableStatefulWidget};
 
@@ -27,8 +27,11 @@ impl State {
         self.mode = AppMode::Quit;
     }
 
+    /// Will only work if a component is focused
     pub(crate) fn edit(&mut self) {
-        self.mode = AppMode::Running(RuningMode::Editing);
+        if self.currently_focused_component.is_some() {
+            self.mode = AppMode::Running(RuningMode::Editing);
+        }
     }
 
     pub(crate) fn normal(&mut self) {
@@ -39,9 +42,16 @@ impl State {
         &self.mode
     }
 
-    pub(crate) fn register_identifiable_widget<'a, 'b, T: IdentifiableStatefulWidget>(
+    pub(crate) fn get_state_mut(&mut self, id: &str) -> Option<&mut ComponentStateType> {
+        self.stateful_component_states.get_mut(id)
+    }
+
+    pub(crate) fn currently_focused_component_id(&self) -> Option<String> {
+        self.currently_focused_component.as_ref().cloned()
+    }
+    pub(crate) fn register_identifiable_widget<'a, T: IdentifiableStatefulWidget>(
         &'a mut self,
-        id: &'b str,
+        id: &str,
     ) -> RegisterComponent<'a, T> {
         RegisterComponent {
             id: id.to_string(),
@@ -76,10 +86,7 @@ impl State {
     }
 
     pub(crate) fn is_running(&self) -> bool {
-        return match &self.mode {
-            AppMode::Running(_) => true,
-            _ => false,
-        };
+        matches!(self.mode, AppMode::Running(_))
     }
 }
 
@@ -161,6 +168,17 @@ pub enum ComponentStateType {
     CheckBox(bool),
 }
 
+impl ComponentStateType {
+    pub(crate) fn push_char(&mut self, c: char) {
+        match self {
+            ComponentStateType::TextInput(s) => s.push(c),
+            _ => {
+                tracing::warn!("Invalid type on push_char");
+            }
+        }
+    }
+}
+
 impl From<String> for ComponentStateType {
     fn from(s: String) -> Self {
         ComponentStateType::TextInput(s)
@@ -223,4 +241,13 @@ pub enum AppMode {
 pub enum RuningMode {
     Normal,
     Editing,
+}
+
+impl std::fmt::Display for RuningMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuningMode::Normal => write!(f, "Normal"),
+            RuningMode::Editing => write!(f, "Editing"),
+        }
+    }
 }
