@@ -14,7 +14,6 @@ impl Ui {
         area: ratatui::prelude::Rect,
         buf: &mut ratatui::prelude::Buffer,
     ) {
-        state.new_page(Page::Login);
         // Define the overall layout for the login box
         let login_box = Block::default()
             .borders(Borders::ALL)

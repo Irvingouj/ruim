@@ -5,7 +5,7 @@ use ratatui::{backend::Backend, widgets::Widget, Frame, Terminal};
 
 use crate::{
     control::{self, State},
-    term,
+    term::{self, next_event},
     ui::Ui,
 };
 
@@ -25,6 +25,7 @@ impl Default for App {
 
 impl App {
     pub fn new() -> Self {
+        tracing::info!("new ruim app created");
         Self {
             ui: Ui,
             state: State::default(),
@@ -32,38 +33,58 @@ impl App {
     }
 
     pub fn run(&mut self, terminal: &mut Terminal<impl Backend>) -> anyhow::Result<()> {
-        while self.is_running() {
+        let (sender, receiver) = flume::unbounded();
+        let sender_clone = sender.clone();
+
+        ctrlc::set_handler(move || {
+            sender_clone.send(RuimEvent::CtrlC).unwrap();
+        })?;
+
+        std::thread::spawn(move || {
+            loop {
+                if let Ok(Some(event)) = next_event(Duration::from_millis(50)) {
+                    match event {
+                        Event::Key(key) => {
+                            sender.send(RuimEvent::Key(key)).unwrap();
+                        }
+                        _ => todo!()
+                    }
+                }
+            }
+        });
+
+        while self.state.is_running() {
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
+            self.handle_events(&receiver)?;
         }
         Ok(())
-    }
-
-    fn is_running(&self) -> bool {
-        matches!(self.state.mode, control::AppMode::Running(..))
     }
 
     fn draw(&mut self, frame: &mut Frame) {
         frame.render_widget(self, frame.size());
     }
 
-    fn handle_events(&mut self) -> anyhow::Result<()> {
-        let timeout = Duration::from_secs_f64(1.0 / 50.0);
-        match term::next_event(timeout)? {
-            Some(Event::Key(key)) if key.kind == KeyEventKind::Press => self.handle_key_press(key),
-            _ => {}
+    fn handle_events(&mut self, receiver: &flume::Receiver<RuimEvent>) -> anyhow::Result<()> {
+        if let Ok(event) = receiver.recv() {
+            tracing::info!(?event, "event received");
+            match event {
+                RuimEvent::CtrlC => {
+                    self.state.quit()
+                }
+                RuimEvent::Key(key) => self.handle_key_press(key),
+            }
         }
         Ok(())
     }
-    
-
 }
 
 impl Widget for &mut App {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        let (area,buf) = self.ui.render_outer_frame(area,buf);
+        let (area, buf) = self.ui.render_outer_frame(area, buf);
+
         match &self.state.page {
-            control::Page::Login { .. } => {
+            control::Page::Login => {
+                self.state.new_page(control::Page::Login);
                 self.ui.render_login(&mut self.state, area, buf);
             }
             control::Page::Home => {
@@ -77,4 +98,10 @@ impl Widget for &mut App {
             }
         }
     }
+}
+
+#[derive(Debug)]
+pub(crate) enum RuimEvent {
+    CtrlC,
+    Key(crossterm::event::KeyEvent),
 }

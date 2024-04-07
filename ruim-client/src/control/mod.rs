@@ -10,17 +10,33 @@ use crate::ui::{FocusableStatefulWidget, IdentifiableStatefulWidget};
 #[derive(Debug, Clone)]
 pub struct State {
     pub page: Page,
-    pub mode: AppMode,
     pub stateful_component_states: HashMap<String, ComponentStateType>,
     currently_focused_component: Option<String>,
     current_page: Page,
     current_page_focusable_stateful_components: Vec<String>,
+    mode: AppMode,
 }
 
 impl State {
     pub(crate) fn new_page(&mut self, page: Page) {
         self.current_page = page;
         self.current_page_focusable_stateful_components.clear();
+    }
+
+    pub(crate) fn quit(&mut self) {
+        self.mode = AppMode::Quit;
+    }
+
+    pub(crate) fn edit(&mut self) {
+        self.mode = AppMode::Running(RuningMode::Editing);
+    }
+
+    pub(crate) fn normal(&mut self) {
+        self.mode = AppMode::Running(RuningMode::Normal);
+    }
+
+    pub(crate) fn mode(&self) -> &AppMode {
+        &self.mode
     }
 
     pub(crate) fn register_identifiable_widget<'a, 'b, T: IdentifiableStatefulWidget>(
@@ -57,6 +73,13 @@ impl State {
                 }
             }
         }
+    }
+
+    pub(crate) fn is_running(&self) -> bool {
+        return match &self.mode {
+            AppMode::Running(_) => true,
+            _ => false,
+        };
     }
 }
 
@@ -122,7 +145,7 @@ where
         self.state
             .current_page_focusable_stateful_components
             .push(self.id.clone());
-        
+
         if let Some(id) = &self.state.currently_focused_component {
             if id == &self.id {
                 self.widget = self.widget.focus(true);
