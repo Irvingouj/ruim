@@ -2,68 +2,98 @@ use crossterm::event::KeyCode;
 
 use crate::control::{AppMode, RuningMode};
 
-use super::App;
+use super::{
+    key_actions::{KeyAction, KeyIdentifier},
+    App,
+};
 
 impl App {
-    pub(super) fn handle_key_press(&mut self, key: crossterm::event::KeyEvent) {
+    pub(super) fn handle_key_press(&mut self, key_event: crossterm::event::KeyEvent) {
         let AppMode::Running(running_mode) = self.state.mode() else {
             return;
         };
 
-        match running_mode {
-            RuningMode::Normal => {
-                self.handle_normal_mode_key_press(key);
-            }
-            RuningMode::Editing => {
-                self.handle_editing_mode_key_press(key);
-            }
-        }
-    }
+        if matches!(running_mode, RuningMode::Editing)
+            && matches!(key_event.code, KeyCode::Char(..))
+        {
+            let KeyCode::Char(c) = key_event.code else {
+                unreachable!()
+            };
 
-    fn handle_normal_mode_key_press(&mut self, key: crossterm::event::KeyEvent) {
-        match key.code {
-            KeyCode::Char('i') => {
-                self.state.edit();
+            if let Some(state) = self.state.currently_focused_component_mut_state() {
+                state.push_char(c);
             }
-            KeyCode::Char('q') => {
-                self.state.quit();
-            }
-            KeyCode::Char('c') => {
-                if key
-                    .modifiers
-                    .contains(crossterm::event::KeyModifiers::CONTROL)
-                {
-                    self.state.quit();
-                }
-            }
-            KeyCode::Tab => {
-                self.state.next_focusable_component();
-            }
-            _ => {}
         }
-    }
 
-    fn handle_editing_mode_key_press(&mut self, key: crossterm::event::KeyEvent) {
-        match key.code {
-            KeyCode::Esc => {
-                self.state.normal();
-            }
-            KeyCode::Char(char) => {
-                let focused_component = self.state.currently_focused_component_id();
-                if let Some(focused_component) = focused_component {
-                    self.state
-                        .get_state_mut(focused_component.as_ref())
-                        .map(|state_ref_mut| state_ref_mut.push_char(char))
-                        .unwrap_or_else(|| {
-                            tracing::warn!("No focused component found");
-                            self.state.normal();
-                        })
-                } else {
-                    tracing::warn!("No focused component found");
-                    self.state.normal();
-                }
-            }
-            _ => {}
-        }
+        let key_identifier = KeyIdentifier::builder()
+            .key_code(key_event.code)
+            .modifiers(key_event.modifiers)
+            .build();
+
+        let key_action = self.functional_keys.get(&key_identifier);
+        let Some(key_action) = key_action else {
+            tracing::debug!("no key action found for {:?}", key_identifier);
+            return;
+        };
+
+        key_action.action(&mut self.state);
     }
+}
+
+pub(crate) fn functional_key_actions(
+) -> std::collections::HashMap<KeyIdentifier, super::key_actions::KeyAction> {
+    let mut key_actions = std::collections::HashMap::new();
+
+    key_actions.insert(
+        KeyIdentifier::builder()
+            .key_code(KeyCode::Char('q'))
+            .build(),
+        KeyAction::builder()
+            .key_short_help_text("quit")
+            .key_long_help_text("Quit the application")
+            .activate_in_mode(vec![RuningMode::Normal])
+            .action(|state| {
+                state.quit();
+            })
+            .build(),
+    );
+
+    key_actions.insert(
+        KeyIdentifier::builder().key_code(KeyCode::Tab).build(),
+        KeyAction::builder()
+            .key_short_help_text("next focus")
+            .key_long_help_text("Move focus to the next component")
+            .activate_in_mode(vec![RuningMode::Normal])
+            .action(|state| {
+                state.next_focusable_component();
+            })
+            .build(),
+    );
+
+    key_actions.insert(
+        KeyIdentifier::builder()
+            .key_code(KeyCode::Char('e'))
+            .build(),
+        KeyAction::builder()
+            .key_short_help_text("edit")
+            .key_long_help_text("Edit the currently focused component")
+            .activate_in_mode(vec![RuningMode::Normal])
+            .action(|state| {
+                state.edit();
+            })
+            .build(),
+    );
+
+    key_actions.insert(
+        KeyIdentifier::builder().key_code(KeyCode::Esc).build(),
+        KeyAction::builder()
+            .key_short_help_text("back to normal")
+            .key_long_help_text("Return to normal mode")
+            .activate_in_mode(vec![RuningMode::Editing])
+            .action(|state| {
+                state.normal();
+            })
+            .build(),
+    );
+    key_actions
 }

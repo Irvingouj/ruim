@@ -20,9 +20,9 @@ pub fn create_app(state: RuimContext) -> Router {
 pub async fn start_ruim_server() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     tracing_subscriber::fmt::SubscriberBuilder::default()
-        .with_level(true)
-        .with_max_level(tracing::Level::INFO)
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
+
     let state = RuimContext::new().await?;
     let app = create_app(state);
 

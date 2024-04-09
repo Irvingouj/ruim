@@ -6,6 +6,7 @@ members = [
     "crate/message-broker", 
     "api-models",
     "server-dev-util",
+    "xtask"
 ]
 
 [profile.release]

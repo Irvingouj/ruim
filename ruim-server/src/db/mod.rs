@@ -2,8 +2,8 @@ pub mod chat;
 mod user;
 use axum::extract::FromRef;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::Postgres;
 use sqlx::Pool;
+use sqlx::Postgres;
 
 use crate::context::RuimContext;
 

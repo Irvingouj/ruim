@@ -1,8 +1,10 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use ratatui::widgets::StatefulWidget;
 
 use crate::ui::{FocusableStatefulWidget, IdentifiableStatefulWidget};
+pub mod state_type;
+pub use state_type::*;
 
 /// Each focusable stateful component (FSC) is identified by a unique ID.
 /// THe FSC should store its state in the stateful_component_states field of the State struct.
@@ -49,6 +51,15 @@ impl State {
     pub(crate) fn currently_focused_component_id(&self) -> Option<String> {
         self.currently_focused_component.as_ref().cloned()
     }
+
+    pub(crate) fn currently_focused_component_mut_state(
+        &mut self,
+    ) -> Option<&mut ComponentStateType> {
+        self.currently_focused_component
+            .as_ref()
+            .and_then(|id| self.stateful_component_states.get_mut(id))
+    }
+
     pub(crate) fn register_identifiable_widget<'a, T: IdentifiableStatefulWidget>(
         &'a mut self,
         id: &str,
@@ -159,95 +170,5 @@ where
             }
         }
         self
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ComponentStateType {
-    TextInput(String),
-    CheckBox(bool),
-}
-
-impl ComponentStateType {
-    pub(crate) fn push_char(&mut self, c: char) {
-        match self {
-            ComponentStateType::TextInput(s) => s.push(c),
-            _ => {
-                tracing::warn!("Invalid type on push_char");
-            }
-        }
-    }
-}
-
-impl From<String> for ComponentStateType {
-    fn from(s: String) -> Self {
-        ComponentStateType::TextInput(s)
-    }
-}
-
-impl From<bool> for ComponentStateType {
-    fn from(b: bool) -> Self {
-        ComponentStateType::CheckBox(b)
-    }
-}
-
-impl AsMut<String> for ComponentStateType {
-    fn as_mut(&mut self) -> &mut String {
-        match self {
-            ComponentStateType::TextInput(s) => s,
-            _ => panic!("Invalid type"),
-        }
-    }
-}
-
-impl AsMut<bool> for ComponentStateType {
-    fn as_mut(&mut self) -> &mut bool {
-        match self {
-            ComponentStateType::CheckBox(b) => b,
-            _ => panic!("Invalid type"),
-        }
-    }
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self {
-            page: Page::Login,
-            mode: AppMode::Running(RuningMode::Normal),
-            stateful_component_states: HashMap::new(),
-            currently_focused_component: None,
-            current_page: Page::Login,
-            current_page_focusable_stateful_components: vec![],
-        }
-    }
-}
-
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub enum Page {
-    Login,
-    Home,
-    Settings,
-    Chat,
-}
-
-#[derive(Debug, Clone)]
-pub enum AppMode {
-    Running(RuningMode),
-    Destroy,
-    Quit,
-}
-
-#[derive(Debug, Clone)]
-pub enum RuningMode {
-    Normal,
-    Editing,
-}
-
-impl std::fmt::Display for RuningMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RuningMode::Normal => write!(f, "Normal"),
-            RuningMode::Editing => write!(f, "Editing"),
-        }
     }
 }

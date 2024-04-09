@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 use crossterm::event::Event;
 use ratatui::{backend::Backend, widgets::Widget, Frame, Terminal};
@@ -9,12 +9,13 @@ use crate::{
     ui::Ui,
 };
 
+mod key_actions;
 mod key_events;
-
 #[derive(Debug)]
 pub struct App {
     ui: Ui,
     state: State,
+    functional_keys: HashMap<key_actions::KeyIdentifier, key_actions::KeyAction>,
 }
 
 impl Default for App {
@@ -29,6 +30,7 @@ impl App {
         Self {
             ui: Ui,
             state: State::default(),
+            functional_keys: key_events::functional_key_actions(),
         }
     }
 
@@ -72,15 +74,32 @@ impl App {
         }
         Ok(())
     }
+
+    pub(crate) fn help_text(&self) -> String {
+        let mode = self.state.mode().to_string();
+        let AppMode::Running(running_mode) = self.state.mode() else {
+            tracing::error!("App mode is not running");
+            return mode;
+        };
+        let keys = self
+            .functional_keys
+            .iter()
+            .filter(|(_, action)| action.activate_in_mode().contains(running_mode))
+            .map(|(key, action)| format!("{}[{}]", key, action.short_help_text(),))
+            .collect::<Vec<String>>()
+            .join(",");
+
+        format!("{}:{}", mode, keys)
+    }
 }
 
 impl Widget for &mut App {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        let AppMode::Running(running_mode) = self.state.mode() else {
+        let AppMode::Running(_) = self.state.mode() else {
             tracing::error!("App mode is not running");
             return;
         };
-        let (area, buf) = self.ui.render_outer_frame(area, buf, running_mode);
+        let (area, buf) = self.ui.render_outer_frame(area, buf, self);
 
         match &self.state.page {
             control::Page::Login => {
